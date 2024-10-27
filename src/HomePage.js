@@ -266,7 +266,7 @@ latex_output
                     </>
                 )}
             </HeroSection>
-            <Footer>&copy; <a href = "https://avirald.me">Aviral Damle</a>, 2024</Footer>
+            <Footer>&copy; <a href = "https://avirald.me">Aviral Damle</a>, 2024. All rights reserved</Footer>
         </PageContainer>
     );
 };
