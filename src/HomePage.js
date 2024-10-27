@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import Latex from 'react-latex';
+import 'katex/dist/katex.min.css'; // Ensure KaTeX CSS is imported
 
 const PageContainer = styled.div`
     display: flex;
@@ -32,8 +33,7 @@ const SubText = styled.p`
 `;
 
 const LatexWrapper = styled.div`
-    font-size: 1.1rem;
-    color: #333;
+    font-size: 1.5rem; /* Adjust the size as needed */
     margin-top: 1rem;
     text-align: center;
 `;
@@ -84,12 +84,33 @@ const Button = styled.button`
     }
 `;
 
+const ErrorText = styled.p`
+    color: red;
+    font-size: 1.2rem;
+    margin-top: 1rem;
+`;
+
+const LoadingText = styled.p`
+    font-size: 1.2rem;
+    color: #007bff;
+    margin-top: 1rem;
+`;
+
 const Footer = styled.footer`
     width: 100%;
     text-align: center;
     padding: 1rem;
     background-color: #f1f1f1;
 `;
+
+const VideoWrapper = styled.div`
+
+`
+
+const Iframe = styled.iframe`
+width: 800px;
+height: 480px;
+`
 
 const HomePage = () => {
     const [coordinates, setCoordinates] = useState('');
@@ -99,6 +120,8 @@ const HomePage = () => {
     const [potential, setPotential] = useState('');
     const [phi, setPhi] = useState('');
     const [latexOutput, setLatexOutput] = useState('');
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     const handleMatrixChange = (row, col, value, setMatrix) => {
         setMatrix(prevMatrix => {
@@ -109,10 +132,13 @@ const HomePage = () => {
     };
 
     const runPythonCode = async () => {
-        const pyodide = await window.loadPyodide();
-        await pyodide.loadPackage("sympy");
+        setLoading(true);
+        setError(null);
+        try {
+            const pyodide = await window.loadPyodide();
+            await pyodide.loadPackage("sympy");
 
-        const pythonCode = `
+            const pythonCode = `
 import sympy as sp
 
 # Collecting inputs
@@ -126,14 +152,13 @@ derivative_of_potential = sp.diff(potential, phi);
 phi = sp.sympify('${phi}')
 derivative_of_potential = derivative_of_potential.subs(sp.Symbol('phi'), phi)
 
-
 size = len(coordinates)
 derivatives_of_scalar_field = [sp.diff(phi, coord) for coord in coordinates]
 
 inverse = metric.inv()
 determinant = metric.det()
 
-# Compute the kinetic term g^{\alpha\beta}\partial_{\alpha}\phi\partial_{\beta}\phi
+# Compute the kinetic term g^{\\alpha\\beta}\\partial_{\\alpha}\\phi\\partial_{\\beta}\\phi
 kinetic_term = sum(inverse[mu, nu] * derivatives_of_scalar_field[mu] * derivatives_of_scalar_field[nu]
                    for mu in range(size) for nu in range(size))
 
@@ -158,9 +183,15 @@ for mu in range(size):
 
 latex_output = sp.latex(einstein_tensor)
 latex_output
-        `;
-        const result = await pyodide.runPython(pythonCode);
-        setLatexOutput(result);  // Store the LaTeX output
+            `;
+            const result = await pyodide.runPython(pythonCode);
+            setLatexOutput(result);  // Store the LaTeX output
+            setError(null);  // Clear any previous errors
+        } catch (err) {
+            setError(`An error occurred: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const copyToClipboard = () => {
@@ -199,7 +230,15 @@ latex_output
                         {`$\\Box\\phi = (8\\pi T + 2V - \\phi V')/(3+2\\omega)$`}
                     </Latex>
                 </LatexWrapper>
-                
+                <VideoWrapper>
+                    <Iframe
+                        src = "https://www.youtube.com/embed/8k5Eii-09BU"
+                        title = "Demo"
+                        allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        >
+                    </Iframe>
+                </VideoWrapper>
                 {/* Input Fields */}
                 <InputWrapper>
                     <Label>
@@ -255,6 +294,9 @@ latex_output
                     </Label>
                     <Button onClick={runPythonCode}>Calculate Einstein Tensor</Button>
                 </InputWrapper>
+
+                {loading && <LoadingText>Loading...</LoadingText>}
+                {error && <ErrorText>{error}</ErrorText>}
 
                 {latexOutput && (
                     <>
